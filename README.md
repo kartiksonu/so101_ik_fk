@@ -1,6 +1,6 @@
 # SO101 IK/FK Module
 
-This package provides **Forward Kinematics (FK)**, **Inverse Kinematics (IK)**, and **Visualization** utilities for the **SO101 Robot Arm**. It is designed to be a standalone module extracted from the LeRobot ecosystem, allowing for lightweight kinematics calculations and 3D trajectory visualization without heavy dependencies.
+This package provides **Forward Kinematics (FK)**, **Inverse Kinematics (IK)**, and **Visualization** utilities for the **SO101 Robot Arm**. It is designed to be a standalone module extracted from the LeRobot ecosystem, allowing for lightweight kinematics calculations and 3D trajectory visualization.
 
 ## Features
 
@@ -8,26 +8,42 @@ This package provides **Forward Kinematics (FK)**, **Inverse Kinematics (IK)**, 
 *   **Inverse Kinematics (IK):** Solve for joint angles given a target end-effector pose (via `placo`).
 *   **Visualization:** Create 3D trajectory GIFs of the end-effector path from joint data.
 *   **Data Loading:** Utilities to download and process SO101 datasets from Hugging Face.
-*   **Standalone URDF:** Includes the `so101_new_calib.urdf` for self-contained operation.
+*   **Standalone URDF:** Includes the `so101_new_calib.urdf` and associated meshes for self-contained operation.
 
 ## Installation
 
-### Dependencies
+### From Source
 
-Ensure you have the following installed:
+Clone the repository and install dependencies:
 
 ```bash
-pip install numpy matplotlib torch placo datasets huggingface_hub
+git clone https://github.com/kartiksonu/so101_ik_fk.git
+cd so101_ik_fk
+pip install -e .
 ```
 
-*Note: `placo` is required for the underlying kinematics solver.*
+Or using `requirements.txt`:
 
-### Usage
+```bash
+pip install -r requirements.txt
+```
+
+### Dependencies
+
+*   `numpy`
+*   `torch`
+*   `matplotlib`
+*   `datasets` (Hugging Face)
+*   `huggingface_hub`
+*   `placo`: Required for the underlying kinematics solver.
+
+## Usage
 
 #### 1. Forward Kinematics
 
 ```python
 from so101_ik_fk import SO101ForwardKinematics, SO101Position
+import numpy as np
 
 # Initialize FK solver (uses internal URDF by default)
 fk = SO101ForwardKinematics()
@@ -64,6 +80,7 @@ from so101_ik_fk import create_trajectory_gif
 import numpy as np
 
 # Shape: (N_frames, 5) or (N_frames, 6)
+# Joints must be in degrees
 my_joint_data = np.random.rand(100, 5) * 45 
 
 create_trajectory_gif(
@@ -84,8 +101,10 @@ so101_ik_fk/
 │   ├── data.py               # HF Dataset loading utilities
 │   └── visualization.py      # Matplotlib 3D animation logic
 ├── urdfs/
-│   └── so101_new_calib.urdf  # Robot description file
-└── scripts/
-    └── visualize_ee_in_3d.py # CLI script for generating visualizations
+│   ├── so101_new_calib.urdf  # Robot description file
+│   └── assets/               # Mesh files (.stl)
+├── scripts/
+│   └── visualize_ee_in_3d.py # CLI script for generating visualizations
+├── pyproject.toml            # Python package configuration
+└── requirements.txt          # Dependency list
 ```
-
