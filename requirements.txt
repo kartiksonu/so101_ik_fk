@@ -4,4 +4,3 @@ matplotlib
 datasets
 huggingface_hub
 placo>=0.0.6
-
