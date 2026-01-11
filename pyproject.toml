@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "so101_ik_fk"
-version = "0.1.0"
-description = "Inverse and Forward Kinematics module for SO101 Robot Arm"
+version = "0.2.0"
+description = "Inverse and Forward Kinematics module for SO101 Robot Arm with Rerun visualization"
 readme = "README.md"
 authors = [
   { name = "Your Name", email = "your.email@example.com" },
@@ -22,7 +22,20 @@ dependencies = [
     "matplotlib",
     "datasets",
     "huggingface_hub",
-    "placo>=0.0.6" 
+    "placo>=0.0.6",
+    "pillow",
+]
+
+[project.optional-dependencies]
+# Rerun visualization support
+viz = [
+    "rerun-sdk>=0.18.0",
+    "psutil",
+]
+# All optional dependencies
+all = [
+    "rerun-sdk>=0.18.0",
+    "psutil",
 ]
 
 [project.urls]
@@ -30,7 +43,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/kartiksonu/so101_ik_fk/issues"
 
 [tool.setuptools]
-packages = ["so101_ik_fk", "so101_ik_fk.lib", "so101_ik_fk.utils"]
+packages = ["so101_ik_fk", "so101_ik_fk.lib", "so101_ik_fk.utils", "so101_ik_fk.viz"]
 package-dir = {"so101_ik_fk" = "."}
 
 [tool.setuptools.package-data]
