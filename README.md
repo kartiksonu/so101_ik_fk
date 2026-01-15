@@ -165,24 +165,60 @@ with RerunVisualizer(spawn=True) as viz:
         time.sleep(0.05)  # 20 FPS playback
 ```
 
+#### 6. Interactive IK Visualizer (Plotly)
+
+An interactive web-based visualizer to explore IK round-trip error: `||FK(IK(X_cmd)) - X_cmd||`
+
+```bash
+cd so101_ik_fk
+python scripts/interactive_ik_visualizer.py
+# Open http://127.0.0.1:8050 in your browser
+```
+
+**Features:**
+- **Blue robot:** Baseline configuration (adjust with joint sliders)
+- **Red robot:** IK solution for target end-effector position
+- **Green marker:** Target end-effector position (X_cmd)
+- **Real-time IK error display** in mm
+- **Click-to-set:** Click anywhere on the 3D plot to set target position
+- **Mini coordinate axes** at robot base (X=red, Y=green, Z=blue)
+
+#### 7. Running Tests
+
+```bash
+cd so101_ik_fk
+python -m pytest tests/ -v
+```
+
+Tests include:
+- IK round-trip error verification: `||FK(IK(X_cmd)) - X_cmd|| < 1mm`
+- Various robot configurations (HOME, FORWARD_EXTENDED, TUCKED)
+- Random configuration tests
+
 ## Structure
 
 ```
 so101_ik_fk/
 ├── lib/
 │   ├── kinematics.py         # Generic RobotKinematics wrapper (placo)
+│   ├── delta_ik.py           # Delta-based IK (prevents branch jumping)
 │   └── so101_kinematics.py   # SO101 specific implementation & Enums
+├── metrics/
+│   └── error_metrics.py      # Kinematic error metrics (task/joint/IK error)
 ├── utils/
 │   ├── data.py               # HF Dataset loading utilities
 │   └── visualization.py      # Matplotlib 3D animation (GIF export)
-├── viz/                      # NEW: Rerun visualization module
+├── viz/                      # Rerun visualization module
 │   ├── __init__.py
 │   └── rerun_visualizer.py   # RerunVisualizer class
+├── tests/                    # Unit tests
+│   └── test_ik_roundtrip.py  # IK round-trip error tests
 ├── urdfs/
 │   ├── so101_new_calib.urdf  # Robot description file
 │   └── assets/               # Mesh files (.stl)
 ├── scripts/
-│   └── visualize_ee_in_3d.py # CLI script for generating visualizations
+│   ├── visualize_ee_in_3d.py          # CLI for trajectory GIFs
+│   └── interactive_ik_visualizer.py   # Plotly IK visualizer
 ├── pyproject.toml            # Python package configuration
 └── requirements.txt          # Dependency list
 ```
@@ -228,4 +264,21 @@ class SO101ForwardKinematics:
 
     def get_ee_orientation(self, joint_angles: np.ndarray) -> np.ndarray:
         """Returns 3x3 rotation matrix."""
+```
+
+### KinematicErrorMetrics
+
+```python
+from so101_ik_fk.metrics import KinematicErrorMetrics
+
+metrics = KinematicErrorMetrics(fk_fn=fk.get_ee_position, ik_fn=ik_solver)
+
+# Compute all three error metrics at once
+result = metrics.compute_all(X_cmd, theta_obs)
+print(result)  # task=0.0123m, joint=2.34°, ik=0.0001m
+
+# Individual metrics:
+# 1. Task Space Error: ||X_cmd - FK(θ_obs)||
+# 2. Joint Space Error: ||IK(X_cmd) - θ_obs||
+# 3. IK Error: ||FK(IK(X_cmd)) - X_cmd||
 ```

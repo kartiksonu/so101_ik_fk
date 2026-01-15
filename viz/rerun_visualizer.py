@@ -4,9 +4,9 @@ Rerun-based 3D visualizer for SO101 robot.
 Provides real-time visualization of:
 - Robot arm (joint space) from joint angles
 - Action trajectories (action space) from model predictions
+- Target EE position
 - Camera feeds
 - Coordinate frames
-- Target positions with clamping visualization
 """
 
 from __future__ import annotations
@@ -406,39 +406,20 @@ class RerunVisualizer:
     def log_target(
         self,
         target_ee: np.ndarray,
-        safe_target: np.ndarray | None = None,
         namespace: str = "/world/target",
     ):
         """
-        Log target position with optional clamping visualization.
+        Log target EE position.
 
         Args:
-            target_ee: Raw target position from model
-            safe_target: Clamped/safe target (if different)
+            target_ee: Target position [x, y, z]
             namespace: Rerun path namespace
         """
-        # Safe target (yellow)
-        safe = safe_target if safe_target is not None else target_ee
-        rr.log(f"{namespace}/safe", rr.Points3D(
-            [safe],
+        rr.log(f"{namespace}", rr.Points3D(
+            [target_ee],
             colors=[[255, 255, 0]],
             radii=[0.015],
         ))
-
-        # If raw target differs, show it and the clamping line
-        if safe_target is not None:
-            diff = np.linalg.norm(target_ee - safe_target)
-            if diff > 0.01:
-                rr.log(f"{namespace}/raw", rr.Points3D(
-                    [target_ee],
-                    colors=[[255, 0, 0]],
-                    radii=[0.010],
-                ))
-                rr.log(f"{namespace}/clamp_line", rr.LineStrips3D(
-                    [[target_ee, safe_target]],
-                    colors=[[255, 100, 100]],
-                    radii=[0.002],
-                ))
 
     # =========================================================================
     # Image Visualization
@@ -480,7 +461,6 @@ class RerunVisualizer:
         action_chunk: np.ndarray | None = None,
         images: dict[str, np.ndarray] | None = None,
         target_ee: np.ndarray | None = None,
-        safe_target: np.ndarray | None = None,
         show_labels: bool = True,
     ):
         """
@@ -490,8 +470,7 @@ class RerunVisualizer:
             joints: Joint positions in degrees [5 or 6 values]
             action_chunk: Action chunk [N, 7] or [N, 3]
             images: Dict of camera images {"name": image}
-            target_ee: Raw target EE position
-            safe_target: Clamped target EE position
+            target_ee: Target EE position [x, y, z]
             show_labels: Whether to show frame/action labels
         """
         # Current EE position (computed from joints)
@@ -518,7 +497,7 @@ class RerunVisualizer:
 
         # Log target
         if target_ee is not None:
-            self.log_target(target_ee, safe_target)
+            self.log_target(target_ee)
 
     # =========================================================================
     # Lifecycle Management

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class RobotKinematics:
     """Robot kinematics using placo library for forward and inverse kinematics."""
 
@@ -67,45 +68,63 @@ class RobotKinematics:
         desired_ee_pose: np.ndarray,
         position_weight: float = 1.0,
         orientation_weight: float = 0.01,
+        max_iterations: int = 100,
+        position_tolerance: float = 0.001,  # 1mm
     ) -> np.ndarray:
         """
-        Compute inverse kinematics using placo solver.
+        Compute inverse kinematics using placo solver with iterative refinement.
 
         Args:
             current_joint_pos: Current joint positions in degrees (used as initial guess)
             desired_ee_pose: Target end-effector pose as a 4x4 transformation matrix
             position_weight: Weight for position constraint in IK
             orientation_weight: Weight for orientation constraint in IK, set to 0.0 to only constrain position
+            max_iterations: Maximum number of IK iterations for convergence
+            position_tolerance: Position error tolerance in meters (default 1mm)
 
         Returns:
             Joint positions in degrees that achieve the desired end-effector pose
         """
+        target_position = desired_ee_pose[:3, 3]
+        joint_pos_deg = current_joint_pos[: len(self.joint_names)].copy()
 
-        # Convert current joint positions to radians for initial guess
-        current_joint_rad = np.deg2rad(current_joint_pos[: len(self.joint_names)])
+        for _ in range(max_iterations):
+            # Convert current joint positions to radians
+            joint_pos_rad = np.deg2rad(joint_pos_deg)
 
-        # Set current joint positions as initial guess
-        for i, joint_name in enumerate(self.joint_names):
-            self.robot.set_joint(joint_name, current_joint_rad[i])
+            # Set current joint positions
+            for i, joint_name in enumerate(self.joint_names):
+                self.robot.set_joint(joint_name, joint_pos_rad[i])
+            self.robot.update_kinematics()
 
-        # Update the target pose for the frame task
-        self.tip_frame.T_world_frame = desired_ee_pose
+            # Check current position error
+            current_pose = self.robot.get_T_world_frame(self.target_frame_name)
+            current_position = current_pose[:3, 3]
+            position_error = np.linalg.norm(current_position - target_position)
 
-        # Configure the task based on position_only flag
-        self.tip_frame.configure(self.target_frame_name, "soft", position_weight, orientation_weight)
+            if position_error < position_tolerance:
+                break
 
-        # Solve IK
-        self.solver.solve(True)
-        self.robot.update_kinematics()
+            # Build target pose: current orientation + target position
+            target_pose = current_pose.copy()
+            target_pose[:3, 3] = target_position
 
-        # Extract joint positions
-        joint_pos_rad = []
-        for joint_name in self.joint_names:
-            joint = self.robot.get_joint(joint_name)
-            joint_pos_rad.append(joint)
+            # Update the target pose for the frame task
+            self.tip_frame.T_world_frame = target_pose
 
-        # Convert back to degrees
-        joint_pos_deg = np.rad2deg(joint_pos_rad)
+            # Configure the task
+            self.tip_frame.configure(self.target_frame_name, "soft", position_weight, orientation_weight)
+
+            # Solve IK (one iteration)
+            self.solver.solve(True)
+            self.robot.update_kinematics()
+
+            # Extract new joint positions
+            joint_pos_rad = []
+            for joint_name in self.joint_names:
+                joint = self.robot.get_joint(joint_name)
+                joint_pos_rad.append(joint)
+            joint_pos_deg = np.rad2deg(joint_pos_rad)
 
         # Preserve gripper position if present in current_joint_pos
         if len(current_joint_pos) > len(self.joint_names):
@@ -114,4 +133,4 @@ class RobotKinematics:
             result[len(self.joint_names) :] = current_joint_pos[len(self.joint_names) :]
             return result
         else:
-            return joint_pos_deg
+            return np.array(joint_pos_deg)

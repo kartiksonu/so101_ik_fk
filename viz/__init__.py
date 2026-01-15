@@ -18,3 +18,4 @@ Example:
 from .rerun_visualizer import RerunVisualizer
 
 __all__ = ["RerunVisualizer"]
+
